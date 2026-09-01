@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 const required=['index.html','src/ui/styles.css','src/ui/app.js','src/application/gift-service.js','src/infrastructure/game-live-source.js','data/verified-gifts.json'];for(const f of required)if(!fs.existsSync(f))throw new Error('Arquivo ausente: '+f);
-const html=fs.readFileSync('index.html','utf8'),svc=fs.readFileSync('src/application/gift-service.js','utf8'),css=fs.readFileSync('src/ui/styles.css','utf8'),data=JSON.parse(fs.readFileSync('data/verified-gifts.json','utf8'));
-for(const token of ['LIMPAR HISTÓRICO','data-tab="saved"','data-tab="verified"'])if(!html.includes(token))throw new Error('Contrato UI ausente: '+token);
+const html=fs.readFileSync('index.html','utf8'),svc=fs.readFileSync('src/application/gift-service.js','utf8'),css=fs.readFileSync('src/ui/styles.css','utf8'),src=fs.readFileSync('src/infrastructure/game-live-source.js','utf8'),app=fs.readFileSync('src/ui/app.js','utf8'),data=JSON.parse(fs.readFileSync('data/verified-gifts.json','utf8'));
+for(const token of ['LIMPAR HISTÓRICO','data-tab="saved"','data-tab="verified"','id="h-bridge"','id="h-live"','id="h-events"','id="h-last"','id="h-reason"'])if(!html.includes(token))throw new Error('Contrato UI ausente: '+token);
+if(/id="key"|Chave do conector/i.test(html))throw new Error('Campo de chave voltou para a interface');
 if(!svc.includes("clearHistory() { this.store.clearDiscoveries(); }"))throw new Error('Clear history perdeu isolamento');
-if(!css.includes('@media(max-width:720px)'))throw new Error('Responsividade móvel ausente');
+if(!src.includes("d.type === 'bridge'")||!src.includes("authRequired")||!src.includes("d.type === 'pong'"))throw new Error('Fluxo/telemetria do Connector incompletos');
+if(!app.includes("s==='offline'")||!app.includes("RECEBENDO")||!app.includes("LIVE CONECTADA"))throw new Error('Estados operacionais da Live ausentes');
+if(!css.includes('@media(max-width:720px)')||!css.includes('overflow-x:hidden'))throw new Error('Responsividade móvel ausente');
 if(data.schema!=='liveplus.verified-gifts.v1'||data.count!==57||data.gifts.length!==57)throw new Error('Backup verificado inválido');
-console.log('QA estático: OK — isolamento, mobile e backup de 57 presentes validados.');
+console.log('QA estático: OK — fluxo sem chave, saúde da Live, isolamento, mobile e backup validados.');
