@@ -4,8 +4,8 @@ const html=fs.readFileSync('index.html','utf8'),svc=fs.readFileSync('src/applica
 for(const token of ['LIMPAR HISTÓRICO','data-tab="saved"','data-tab="verified"','id="h-bridge"','id="h-live"','id="h-events"','id="h-last"','id="h-reason"'])if(!html.includes(token))throw new Error('Contrato UI ausente: '+token);
 if(/id="key"|Chave do conector/i.test(html))throw new Error('Campo de chave voltou para a interface');
 if(!svc.includes("clearHistory() { this.store.clearDiscoveries(); }"))throw new Error('Clear history perdeu isolamento');
-if(!src.includes("d.type === 'bridge'")||!src.includes("authRequired")||!src.includes("d.type === 'pong'"))throw new Error('Fluxo/telemetria do Connector incompletos');
+if(!src.includes("d.type === 'bridge'")||!src.includes("type: 'public_observe'")||!src.includes("d.type === 'pong'"))throw new Error('Fluxo public_observe/telemetria do Connector incompletos');
 if(!app.includes("s==='offline'")||!app.includes("RECEBENDO")||!app.includes("LIVE CONECTADA"))throw new Error('Estados operacionais da Live ausentes');
-if(!css.includes('@media(max-width:720px)')||!css.includes('overflow-x:hidden'))throw new Error('Responsividade móvel ausente');
+if(!css.includes('@media(max-width:720px)')||!css.includes('overflow-x:hidden')||!css.includes('header{display:grid'))throw new Error('Responsividade móvel/anti-colapso ausente');
 if(data.schema!=='liveplus.verified-gifts.v1'||data.count!==57||data.gifts.length!==57)throw new Error('Backup verificado inválido');
-console.log('QA estático: OK — fluxo sem chave, saúde da Live, isolamento, mobile e backup validados.');
+console.log('QA estático: OK — public_observe sem chave, saúde da Live, isolamento, anti-colapso mobile e backup validados.');
