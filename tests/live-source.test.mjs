@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import { GameLiveSource } from '../src/infrastructure/game-live-source.js';
+class FakeWS{constructor(url){this.url=url;this.sent=[];FakeWS.last=this}send(v){this.sent.push(JSON.parse(v))}close(){this.closed=true}}
+test('replica handshake do Game: auth -> connect username',()=>{const src=new GameLiveSource({WebSocketImpl:FakeWS,endpoint:'ws://x'});src.connect({username:'@abc',key:'k'});const ws=FakeWS.last;ws.onopen();assert.deepEqual(ws.sent[0],{type:'auth',key:'k'});ws.onmessage({data:JSON.stringify({type:'auth',ok:true})});assert.deepEqual(ws.sent[1],{type:'connect',username:'abc'})});
