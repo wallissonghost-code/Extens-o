@@ -1,5 +1,5 @@
 export class GameLiveSource {
-  constructor({ endpoint = 'wss://game-f202.onrender.com', WebSocketImpl = globalThis.WebSocket, handshakeTimeoutMs = 12000, heartbeatMs = 10000 } = {}) {
+  constructor({ endpoint = 'wss://game-f202.onrender.com', WebSocketImpl = globalThis.WebSocket, handshakeTimeoutMs = 15000, heartbeatMs = 10000 } = {}) {
     this.endpoint = endpoint;
     this.WebSocketImpl = WebSocketImpl;
     this.handshakeTimeoutMs = handshakeTimeoutMs;
@@ -17,8 +17,7 @@ export class GameLiveSource {
     this.disconnect();
     const ws = new this.WebSocketImpl(this.endpoint);
     this.socket = ws;
-    let connectSent = false;
-    let authSent = false;
+    let observeSent = false;
     let failed = false;
 
     const send = payload => { try { ws.send(JSON.stringify(payload)); return true; } catch { return false; } };
@@ -26,11 +25,11 @@ export class GameLiveSource {
       clearInterval(this.heartbeat);
       this.heartbeat = setInterval(() => { if (ws === this.socket) send({ type: 'ping' }); }, this.heartbeatMs);
     };
-    const sendConnect = () => {
-      if (connectSent || ws !== this.socket) return;
-      connectSent = true;
-      send({ type: 'connect', username: user });
-      onStatus('checking', { username: user });
+    const sendObserve = () => {
+      if (observeSent || ws !== this.socket) return;
+      observeSent = true;
+      send({ type: 'public_observe', username: user });
+      onStatus('checking', { username: user, publicObserver: true });
     };
     const fail = message => {
       if (failed) return;
@@ -39,8 +38,8 @@ export class GameLiveSource {
     };
 
     this.timer = setTimeout(() => {
-      if (ws !== this.socket || connectSent) return;
-      fail('O conector não respondeu a tempo. Tente novamente.');
+      if (ws !== this.socket) return;
+      fail(observeSent ? 'A Live não respondeu a tempo.' : 'O Connector não respondeu a tempo.');
       try { ws.close(); } catch {}
     }, this.handshakeTimeoutMs);
 
@@ -56,23 +55,7 @@ export class GameLiveSource {
 
       if (d.type === 'bridge' && d.status === 'ready') {
         onStatus('bridge-ready', d);
-        if (d.authRequired) {
-          if (!authSent) {
-            authSent = true;
-            send({ type: 'auth', key: '' });
-            onStatus('authenticating', d);
-          }
-        } else sendConnect();
-        return;
-      }
-
-      if (d.type === 'auth') {
-        if (!d.ok) {
-          fail('Este conector está exigindo chave. O observador público do Game deveria estar sem chave.');
-          this.disconnect();
-          return;
-        }
-        sendConnect();
+        sendObserve();
         return;
       }
 
@@ -82,7 +65,8 @@ export class GameLiveSource {
       }
 
       if (d.type === 'status') {
-        if (['connected','error','offline'].includes(String(d.status || '').toLowerCase())) {
+        const st = String(d.status || '').toLowerCase();
+        if (['connected','error','offline'].includes(st)) {
           clearTimeout(this.timer);
           this.timer = null;
         }
@@ -106,7 +90,12 @@ export class GameLiveSource {
       if (d.type === 'error') {
         clearTimeout(this.timer);
         this.timer = null;
-        fail(d.message || 'Erro no Connector.');
+        const msg = String(d.message || 'Erro no Connector.');
+        if (/chave do caos connector inválida/i.test(msg)) {
+          fail('O servidor do Game ainda não publicou o observador público. Aguarde o deploy e tente novamente.');
+        } else {
+          fail(msg);
+        }
       }
     };
 
