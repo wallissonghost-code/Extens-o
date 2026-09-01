@@ -8,25 +8,23 @@ class FakeWS {
   close() { this.closed=true; this.onclose?.({code:1000}); }
 }
 
-test('fluxo atual do Game: bridge sem auth -> connect por @usuario',()=>{
+test('bridge do Game -> public_observe somente com @usuario',()=>{
   const src=new GameLiveSource({WebSocketImpl:FakeWS,endpoint:'ws://x',handshakeTimeoutMs:1000,heartbeatMs:999999});
   src.connect({username:'@abc'});
   const ws=FakeWS.last;
   ws.onopen();
   assert.equal(ws.sent.length,0);
-  ws.onmessage({data:JSON.stringify({type:'bridge',status:'ready',authRequired:false})});
-  assert.deepEqual(ws.sent[0],{type:'connect',username:'abc'});
+  ws.onmessage({data:JSON.stringify({type:'bridge',status:'ready',authRequired:true,publicObserver:true})});
+  assert.deepEqual(ws.sent[0],{type:'public_observe',username:'abc'});
   src.disconnect();
 });
 
-test('compatibilidade: bridge com auth continua explicitamente tratado',()=>{
+test('public_observe independe de authRequired=false',()=>{
   const src=new GameLiveSource({WebSocketImpl:FakeWS,endpoint:'ws://x',handshakeTimeoutMs:1000,heartbeatMs:999999});
   src.connect({username:'abc'});
   const ws=FakeWS.last;
-  ws.onmessage({data:JSON.stringify({type:'bridge',status:'ready',authRequired:true})});
-  assert.deepEqual(ws.sent[0],{type:'auth',key:''});
-  ws.onmessage({data:JSON.stringify({type:'auth',ok:true})});
-  assert.deepEqual(ws.sent[1],{type:'connect',username:'abc'});
+  ws.onmessage({data:JSON.stringify({type:'bridge',status:'ready',authRequired:false,publicObserver:true})});
+  assert.deepEqual(ws.sent[0],{type:'public_observe',username:'abc'});
   src.disconnect();
 });
 
@@ -47,8 +45,8 @@ test('status offline do Connector chega intacto para a UI',()=>{
   const src=new GameLiveSource({WebSocketImpl:FakeWS,endpoint:'ws://x',handshakeTimeoutMs:1000,heartbeatMs:999999});
   src.connect({username:'abc',onStatus:(s,d)=>{status=s;detail=d}});
   const ws=FakeWS.last;
-  ws.onmessage({data:JSON.stringify({type:'status',status:'offline',username:'abc',reason:'TikTok informou Live offline'})});
+  ws.onmessage({data:JSON.stringify({type:'status',status:'offline',username:'abc',reason:'TikTok informou que esta conta não está ao vivo.'})});
   assert.equal(status,'offline');
-  assert.equal(detail.reason,'TikTok informou Live offline');
+  assert.equal(detail.reason,'TikTok informou que esta conta não está ao vivo.');
   src.disconnect();
 });
