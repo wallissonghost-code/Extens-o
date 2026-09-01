@@ -1,0 +1,3 @@
+import http from 'node:http';import fs from 'node:fs';import path from 'node:path';
+const root=process.cwd(),mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8'};
+http.createServer((req,res)=>{let p=decodeURIComponent(req.url.split('?')[0]);if(p==='/')p='/index.html';const f=path.resolve(root,'.'+p);if(!f.startsWith(root)){res.writeHead(403);return res.end('403')}fs.readFile(f,(e,b)=>{if(e){res.writeHead(404);return res.end('404')}res.setHeader('content-type',mime[path.extname(f)]||'application/octet-stream');res.end(b)})}).listen(process.env.PORT||4173,()=>console.log('Gift Lab em http://127.0.0.1:'+(process.env.PORT||4173)));
